@@ -1,0 +1,292 @@
+/* ============================================
+   DHRYZN — Progress Styles
+   ============================================ */
+
+.progress-page-header {
+  margin-bottom: var(--space-8);
+}
+
+.progress-page-header h1 {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-2);
+}
+
+.progress-page-header p {
+  color: var(--color-text-secondary);
+}
+
+/* ---- Stats Grid ---- */
+.progress-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.progress-stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  transition: all var(--transition-base);
+}
+
+.progress-stat-card:hover {
+  border-color: var(--color-border-hover);
+  transform: translateY(-2px);
+}
+
+.progress-stat-icon {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-3);
+}
+
+.progress-stat-value {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-stat-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Chart Cards ---- */
+.progress-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.progress-chart-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+
+.progress-chart-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.progress-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.progress-chart-title {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+}
+
+.progress-chart-subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.chart-container {
+  width: 100%;
+  position: relative;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* ---- Mastery Gauge ---- */
+.mastery-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}
+
+.mastery-canvas-wrap {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+
+.mastery-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.mastery-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.mastery-percent {
+  font-size: var(--text-hero);
+  font-weight: var(--weight-bold);
+}
+
+.mastery-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Topics Bars ---- */
+.topics-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.topic-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.topic-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topic-name {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+.topic-percent {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.topic-bar {
+  height: 8px;
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.topic-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.8s ease;
+}
+
+.topic-bar-fill.strong {
+  background: var(--color-success);
+}
+
+.topic-bar-fill.medium {
+  background: var(--color-warning);
+}
+
+.topic-bar-fill.weak {
+  background: var(--color-error);
+}
+
+/* ---- Recommended Action ---- */
+.recommended-action {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.recommended-action:hover {
+  border-color: var(--color-border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.recommended-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.recommended-content {
+  flex: 1;
+}
+
+.recommended-title {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.recommended-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.recommended-arrow {
+  font-size: 1.25rem;
+  color: var(--color-text-tertiary);
+}
+
+/* ---- Exam Readiness ---- */
+.readiness-section {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.readiness-chart-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.readiness-chart-wrap canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.readiness-chart-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+}
+
+.readiness-details {
+  flex: 1;
+}
+
+.readiness-status {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.readiness-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+}

@@ -1,0 +1,161 @@
+/* ============================================
+   DHRYZN — History Styles
+   ============================================ */
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.history-header h1 {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+}
+
+/* ---- Tabs ---- */
+.history-tabs {
+  margin-bottom: var(--space-6);
+}
+
+/* ---- Filters ---- */
+.history-filters {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.history-search {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.history-search-icon {
+  position: absolute;
+  left: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-body);
+  pointer-events: none;
+}
+
+.history-search .input-field {
+  padding-left: 40px;
+}
+
+.history-filter-select {
+  width: 160px;
+}
+
+/* ---- History List ---- */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.history-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.history-card:hover {
+  border-color: var(--color-border-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.history-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.history-card-icon.quiz {
+  background: rgba(var(--color-primary-rgb), 0.12);
+  color: var(--color-primary-light);
+}
+
+.history-card-icon.exam {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--color-warning);
+}
+
+.history-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-card-subject {
+  font-size: var(--text-xs, 0.7rem);
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary-light, #A78BFA);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.history-card-title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.history-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.history-card-score {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-bold);
+  flex-shrink: 0;
+}
+
+.history-card-score.high {
+  color: var(--color-success);
+}
+
+.history-card-score.medium {
+  color: var(--color-warning);
+}
+
+.history-card-score.low {
+  color: var(--color-error);
+}
+
+.history-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}

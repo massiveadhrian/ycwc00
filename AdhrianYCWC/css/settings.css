@@ -1,0 +1,255 @@
+/* ============================================
+   DHRYZN — Settings Styles
+   ============================================ */
+
+.settings-header {
+  margin-bottom: var(--space-8);
+}
+
+.settings-header h1 {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-2);
+}
+
+.settings-header p {
+  color: var(--color-text-secondary);
+}
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 680px;
+}
+
+.settings-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+
+.settings-section-title {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-section-title span {
+  font-size: 1.1rem;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.settings-item-info {
+  flex: 1;
+}
+
+.settings-item-label {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-1);
+}
+
+.settings-item-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.settings-item-control {
+  flex-shrink: 0;
+}
+
+/* ---- Toggle Switch ---- */
+.toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-base);
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+  transition: all var(--transition-base);
+}
+
+.toggle-switch input:checked + .toggle-track {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toggle-switch input:checked + .toggle-track::after {
+  transform: translateX(22px);
+  background: white;
+}
+
+/* ---- Color Picker ---- */
+.color-options {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.color-option {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.color-option.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px currentColor;
+}
+
+/* ---- Slider ---- */
+.settings-slider {
+  width: 160px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border-radius: var(--radius-full);
+  outline: none;
+}
+
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 0 6px rgba(var(--color-primary-rgb), 0.4);
+}
+
+/* ---- Select in Settings ---- */
+.settings-select {
+  width: 180px;
+}
+
+/* ---- Reset / About ---- */
+.settings-reset-btn {
+  margin-top: var(--space-2);
+}
+
+.settings-about {
+  text-align: center;
+  padding: var(--space-4) 0;
+}
+
+.settings-about-logo {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-bold);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--space-2);
+}
+
+.settings-about-version {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.settings-about-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: var(--leading-relaxed);
+}
+
+/* ---- AI & Model Configuration ---- */
+.api-key-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 340px;
+}
+
+.api-key-input {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  flex: 1;
+}
+
+.api-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: var(--weight-medium);
+  background: rgba(52, 211, 153, 0.12);
+  color: #34D399;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+.api-status-pill.offline {
+  background: rgba(248, 113, 113, 0.12);
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.api-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+

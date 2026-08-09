@@ -1,0 +1,257 @@
+/* ============================================
+   DHRYZN — Responsive Styles
+   ============================================ */
+
+/* ---- Tablet (1024px) ---- */
+@media (max-width: 1024px) {
+  :root {
+    --content-padding: var(--space-6);
+  }
+
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .progress-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .progress-charts {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-body {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-nav-panel {
+    position: static;
+  }
+
+  .exam-nav-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    align-items: flex-start;
+  }
+
+  .exam-nav-grid {
+    margin-bottom: 0;
+  }
+
+  .exam-results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subject-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---- Small Tablet (768px) ---- */
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay.visible {
+    display: block;
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .page-container {
+    padding-top: calc(var(--space-10) + 44px);
+  }
+
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .subjects-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .subject-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-results-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .exam-review-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .history-card {
+    flex-wrap: wrap;
+  }
+
+  .history-card-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .settings-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .readiness-section {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-messages {
+    max-height: 350px;
+  }
+}
+
+/* ---- Mobile (480px) ---- */
+@media (max-width: 480px) {
+  :root {
+    --content-padding: var(--space-4);
+    --text-hero: 1.75rem;
+    --text-h1: 1.5rem;
+    --text-h2: 1.25rem;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+
+  .quick-action-card {
+    padding: var(--space-4);
+  }
+
+  .quick-action-desc {
+    display: none;
+  }
+
+  .subjects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+
+  .quiz-results-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-review-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .history-filters {
+    flex-direction: column;
+  }
+
+  .history-search {
+    min-width: 100%;
+  }
+
+  .history-filter-select {
+    width: 100%;
+  }
+
+  .prompt-bar {
+    border-radius: var(--radius-lg);
+  }
+
+  .suggested-prompts {
+    flex-direction: column;
+  }
+
+  .suggested-prompt-chip {
+    text-align: center;
+  }
+
+  .chat-message {
+    max-width: 95%;
+  }
+
+  .quiz-question-card {
+    padding: var(--space-5);
+  }
+
+  .exam-question-card {
+    padding: var(--space-5);
+  }
+
+  .quiz-nav-actions {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .quiz-nav-actions .btn {
+    width: 100%;
+  }
+
+  .quiz-results-actions {
+    flex-direction: column;
+  }
+
+  .quiz-results-actions .btn {
+    width: 100%;
+  }
+
+  .exam-question-actions {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .tab-bar {
+    width: 100%;
+  }
+
+  .tab-item {
+    flex: 1;
+    text-align: center;
+  }
+
+  .question-type-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .continue-session-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+
+  .continue-session-actions {
+    justify-content: stretch;
+  }
+
+  .continue-session-actions .btn {
+    flex: 1;
+  }
+}
