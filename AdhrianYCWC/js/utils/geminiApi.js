@@ -1,5 +1,5 @@
 // ============================================
-// DHRYZN — Google Gemini 3.6 Flash AI Engine (Server-Side Secret Architecture)
+// DHRYZN — Google Gemini AI Engine (Server-Side Secret Architecture)
 // ============================================
 
 const DEFAULT_MODEL = 'gemini-3.6-flash';
@@ -10,17 +10,17 @@ const DEFAULT_MODEL = 'gemini-3.6-flash';
 export async function checkApiStatus() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch('/api/gemini/status', { signal: controller.signal });
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch('/api/gemini', { signal: controller.signal });
     clearTimeout(timeoutId);
     if (res.ok) {
       const data = await res.json();
-      return { online: true, proxy: true, model: data.model || DEFAULT_MODEL };
+      return { online: true, proxy: true, model: data.model || DEFAULT_MODEL, hasKey: Boolean(data.hasKey) };
     }
   } catch (e) {
-    // Backend proxy offline
+    // Backend proxy offline or unreachable
   }
-  return { online: false, proxy: false, model: DEFAULT_MODEL };
+  return { online: false, proxy: false, model: DEFAULT_MODEL, hasKey: false };
 }
 
 /**
@@ -39,7 +39,7 @@ export async function generateGeminiContent({
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const proxyRes = await fetch('/api/gemini/generate', {
+    const proxyRes = await fetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -72,7 +72,7 @@ export async function generateGeminiContent({
     throw e;
   }
 
-  throw new Error('Gemini API request failed. Please check backend server.');
+  throw new Error('Gemini API request failed. Please check backend configuration.');
 }
 
 // ============================================
@@ -80,7 +80,7 @@ export async function generateGeminiContent({
 // ============================================
 
 /**
- * Generate rich, tailored topic explanation using Gemini 3.6 Flash
+ * Generate rich, tailored topic explanation using Gemini AI
  */
 export async function generateTopicExplanation(topic, style = 'Quick Summary', gradeLevel = 'Grade 10') {
   const styleInstructions = {
@@ -140,7 +140,7 @@ Create the explanation now for "${topic}".`;
 }
 
 /**
- * Chat with Studybot using Backend Proxy Server (/api/gemini/chat)
+ * Chat with Studybot using Backend Proxy (/api/gemini)
  */
 export async function chatWithStudybot(userMessage, conversationHistory = [], storeProgress = null) {
   const trimmedInput = (userMessage || '').trim();
@@ -150,7 +150,7 @@ export async function chatWithStudybot(userMessage, conversationHistory = [], st
   const timeoutId = setTimeout(() => controller.abort(), 35000);
 
   try {
-    const res = await fetch('/api/gemini/chat', {
+    const res = await fetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
