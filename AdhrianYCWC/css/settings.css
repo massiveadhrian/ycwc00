@@ -78,44 +78,157 @@
 /* ---- Toggle Switch ---- */
 .toggle-switch {
   position: relative;
-  width: 48px;
-  height: 26px;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
   cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  vertical-align: middle;
 }
 
 .toggle-switch input {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
 }
 
 .toggle-track {
   position: absolute;
   inset: 0;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface-hover);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-full);
   transition: all var(--transition-base);
+  box-sizing: border-box;
 }
 
+.toggle-switch:hover .toggle-track {
+  border-color: var(--color-border-hover);
+}
+
+.toggle-switch input:focus-visible + .toggle-track {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Default switch knob (for standard switches like timer toggle) */
 .toggle-track::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: var(--color-text-secondary);
-  transition: all var(--transition-base);
+  background: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: transform var(--transition-spring), background-color var(--transition-base);
 }
 
 .toggle-switch input:checked + .toggle-track {
   background: var(--color-primary);
   border-color: var(--color-primary);
+  box-shadow: 0 0 12px var(--color-primary-glow);
 }
 
 .toggle-switch input:checked + .toggle-track::after {
-  transform: translateX(22px);
-  background: white;
+  transform: translateX(24px);
+  background: #FFFFFF;
+}
+
+/* ---- Theme-Specific Toggle ---- */
+.theme-toggle {
+  width: 58px;
+  height: 30px;
+}
+
+.theme-toggle .toggle-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 7px;
+  background: var(--color-surface-elevated);
+  border: 1.5px solid var(--color-border);
+}
+
+/* Suppress default ::after on theme toggle in favor of .toggle-thumb */
+.theme-toggle .toggle-track::after {
+  display: none;
+}
+
+.theme-toggle .toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity var(--transition-base), transform var(--transition-base), color var(--transition-base);
+}
+
+.theme-toggle .toggle-icon-sun {
+  color: #F59E0B;
+  opacity: 0.95;
+  transform: scale(1);
+}
+
+.theme-toggle .toggle-icon-moon {
+  color: var(--color-text-tertiary);
+  opacity: 0.4;
+  transform: scale(0.85);
+}
+
+.theme-toggle .toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform var(--transition-spring), background-color var(--transition-base), box-shadow var(--transition-base);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Theme toggle: Dark mode active (checked) */
+.theme-toggle input:checked + .toggle-track {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 14px var(--color-primary-glow);
+}
+
+.theme-toggle input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(26px);
+  background: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.theme-toggle input:checked + .toggle-track .toggle-icon-sun {
+  color: rgba(255, 255, 255, 0.45);
+  opacity: 0.4;
+  transform: scale(0.85);
+}
+
+.theme-toggle input:checked + .toggle-track .toggle-icon-moon {
+  color: #FFFFFF;
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Light mode specific enhancements */
+[data-theme="light"] .theme-toggle .toggle-track {
+  background: #E4E4EC;
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="light"] .theme-toggle input:checked + .toggle-track {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* ---- Color Picker ---- */

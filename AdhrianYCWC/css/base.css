@@ -85,6 +85,18 @@ img {
   min-height: 100vh;
 }
 
+.app-layout.landing-mode .sidebar,
+.app-layout.landing-mode .mobile-menu-btn,
+.app-layout.landing-mode .sidebar-overlay {
+  display: none !important;
+}
+
+.app-layout.landing-mode .main-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);

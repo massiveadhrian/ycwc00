@@ -5,6 +5,7 @@
 import { Store } from './store.js';
 import { Router } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
+import { renderLandingPage } from './components/landing.js';
 import { renderDashboard } from './components/dashboard.js';
 import { renderSubjects } from './components/subjects.js';
 import { renderSubjectDetail } from './components/subjectDetail.js';
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.__dhryzn__ = { renderSidebar, store, router };
 
   // Register routes
+  router.register('landing', (el, params) => renderLandingPage(el, params, store, router));
   router.register('dashboard', (el, params) => renderDashboard(el, params, store, router));
   router.register('subjects', (el, params) => renderSubjects(el, params, store, router));
   router.register('subject', (el, params) => renderSubjectDetail(el, params, store, router));

@@ -49,7 +49,7 @@ export function renderSidebar(container, router, store = null) {
   }
 
   sidebar.innerHTML = `
-    <div class="sidebar-brand">
+    <div class="sidebar-brand" id="sidebar-brand-link" style="cursor: pointer;" title="Back to Home">
       <div class="sidebar-logo">D</div>
       <span class="sidebar-brand-text">DHRYZN</span>
     </div>
@@ -68,6 +68,14 @@ export function renderSidebar(container, router, store = null) {
       <p class="sidebar-footer-text">${t('sidebar.footer')}</p>
     </div>
   `;
+
+  // Brand click handler -> Home
+  sidebar.querySelector('#sidebar-brand-link')?.addEventListener('click', () => {
+    router.navigate('landing');
+    sidebar.classList.remove('open');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (overlay) overlay.classList.remove('visible');
+  });
 
   // Nav click handlers
   sidebar.querySelectorAll('.sidebar-nav-item').forEach(item => {

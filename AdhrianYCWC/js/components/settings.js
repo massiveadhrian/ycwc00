@@ -72,8 +72,7 @@ export function renderSettings(container, params, store, router) {
                 <select class="select-field settings-select" id="setting-gemini-model">
                   <option value="gemini-3.6-flash" ${currentModel === 'gemini-3.6-flash' ? 'selected' : ''}>Gemini 3.6 Flash (Recommended)</option>
                   <option value="gemini-flash-latest" ${currentModel === 'gemini-flash-latest' ? 'selected' : ''}>Gemini Flash Latest</option>
-                  <option value="gemini-2.0-flash-lite" ${currentModel === 'gemini-2.0-flash-lite' ? 'selected' : ''}>Gemini 2.0 Flash Lite</option>
-                  <option value="gemini-2.0-flash" ${currentModel === 'gemini-2.0-flash' ? 'selected' : ''}>Gemini 2.0 Flash</option>
+                  <option value="gemini-3.5-flash" ${currentModel === 'gemini-3.5-flash' ? 'selected' : ''}>Gemini 3.5 Flash</option>
                 </select>
               </div>
             </div>
@@ -107,9 +106,22 @@ export function renderSettings(container, params, store, router) {
                 <div class="settings-item-desc">${t('settings.darkThemeDesc')}</div>
               </div>
               <div class="settings-item-control">
-                <label class="toggle-switch">
-                  <input type="checkbox" id="setting-theme" ${settings.theme === 'dark' ? 'checked' : ''}>
-                  <div class="toggle-track"></div>
+                <label class="toggle-switch theme-toggle" for="setting-theme" title="${settings.theme === 'dark' ? 'Dark Mode' : 'Light Mode'}">
+                  <input type="checkbox" id="setting-theme" ${settings.theme === 'dark' ? 'checked' : ''} aria-label="${t('settings.darkTheme')}">
+                  <div class="toggle-track">
+                    <span class="toggle-icon toggle-icon-sun" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="4"/>
+                        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+                      </svg>
+                    </span>
+                    <span class="toggle-icon toggle-icon-moon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                      </svg>
+                    </span>
+                    <div class="toggle-thumb"></div>
+                  </div>
                 </label>
               </div>
             </div>

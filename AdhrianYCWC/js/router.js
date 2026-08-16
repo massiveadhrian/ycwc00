@@ -16,19 +16,31 @@ export class Router {
     this.routes[path] = renderFn;
   }
 
+  getCurrentRoute() {
+    const hash = window.location.hash.slice(1) || 'landing';
+    return hash.split('/')[0];
+  }
+
   handleRoute() {
-    const hash = window.location.hash.slice(1) || 'dashboard';
+    const rawHash = window.location.hash.slice(1);
+    const hash = (!rawHash || rawHash === '' || rawHash === '/') ? 'landing' : rawHash;
     const [route, ...params] = hash.split('/');
 
-    if (this.currentRoute === hash) return;
+    if (this.currentRoute === hash && this.contentEl.children.length > 0) return;
     this.currentRoute = hash;
+
+    // Toggle landing mode on app container
+    const appEl = document.getElementById('app');
+    if (appEl) {
+      appEl.classList.toggle('landing-mode', route === 'landing');
+    }
 
     // Run cleanup for previous page
     if (this.currentCleanup && typeof this.currentCleanup === 'function') {
       this.currentCleanup();
     }
 
-    const renderFn = this.routes[route];
+    const renderFn = this.routes[route] || this.routes['landing'] || this.routes['dashboard'];
     if (renderFn) {
       // Page transition
       this.contentEl.classList.remove('page-enter');
@@ -48,7 +60,7 @@ export class Router {
         // Scroll to top
         this.contentEl.scrollTop = 0;
         window.scrollTo(0, 0);
-      }, 150);
+      }, 120);
     }
   }
 

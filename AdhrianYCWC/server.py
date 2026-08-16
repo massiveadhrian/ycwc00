@@ -209,9 +209,9 @@ class DhryznRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_json(code, {'ok': False, 'error': message})
 
     def do_GET(self):
-        # API Status Endpoint
-        if self.path.startswith('/api/gemini/status'):
-            active_key = os.environ.get('GEMINI_API_KEY', '').strip()
+        # API Status Endpoint (/api/gemini or /api/gemini/status)
+        if self.path == '/api/gemini' or self.path.startswith('/api/gemini/status') or self.path.startswith('/api/gemini?') or self.path.startswith('/api/gemini/'):
+            active_key = os.environ.get('GEMINI_API_KEY', '').strip() or API_KEY
             resp_data = {
                 'ok': True,
                 'status': 'online',
@@ -257,6 +257,32 @@ class DhryznRequestHandler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        # Unified / Dedicated Gemini Endpoint (/api/gemini, /api/gemini/chat, /api/gemini/generate)
+        if self.path == '/api/gemini' or self.path.startswith('/api/gemini/') or self.path.startswith('/api/gemini?'):
+            try:
+                data = self.read_json_body()
+            except Exception as e:
+                self.send_error_response(400, f'Invalid JSON payload: {e}')
+                return
+
+            if data.get('action') == 'status':
+                active_key = os.environ.get('GEMINI_API_KEY', '').strip() or API_KEY
+                self.send_json(200, {
+                    'ok': True,
+                    'status': 'online',
+                    'service': 'Gemini 3.6 Flash Proxy',
+                    'model': DEFAULT_MODEL,
+                    'proxyActive': True,
+                    'hasKey': bool(active_key and len(active_key) > 10)
+                })
+                return
+
+            if 'message' in data or 'history' in data:
+                self.handle_gemini_chat(data)
+            else:
+                self.handle_gemini_generate(data)
+            return
+
         # Auth: Sign Up
         if self.path.startswith('/api/auth/signup'):
             try:
@@ -320,28 +346,6 @@ class DhryznRequestHandler(http.server.SimpleHTTPRequestHandler):
                 conn.commit()
 
             self.send_json(200, {'ok': True, 'updatedAt': now_iso})
-            return
-
-        # Dedicated Multi-Turn Chat Endpoint
-        if self.path.startswith('/api/gemini/chat'):
-            try:
-                data = self.read_json_body()
-            except Exception as e:
-                self.send_error_response(400, f'Invalid JSON payload: {e}')
-                return
-
-            self.handle_gemini_chat(data)
-            return
-
-        # API Generate Content Endpoint
-        if self.path.startswith('/api/gemini/generate'):
-            try:
-                data = self.read_json_body()
-            except Exception as e:
-                self.send_error_response(400, f'Invalid JSON payload: {e}')
-                return
-
-            self.handle_gemini_generate(data)
             return
 
         self.send_error_response(404, 'Endpoint not found.')
@@ -494,7 +498,7 @@ class DhryznRequestHandler(http.server.SimpleHTTPRequestHandler):
         )
 
     def execute_gemini_request(self, contents, system_instruction=None, req_model=DEFAULT_MODEL, temperature=0.7, max_tokens=2048, json_mode=False):
-        active_key = os.environ.get('GEMINI_API_KEY', '').strip()
+        active_key = os.environ.get('GEMINI_API_KEY', '').strip() or API_KEY
 
         if not active_key:
             self.send_error_response(500, 'GEMINI_API_KEY is not configured in server environment or .env file.')
@@ -525,12 +529,15 @@ class DhryznRequestHandler(http.server.SimpleHTTPRequestHandler):
         last_error = None
         for model_name in models_to_try:
             clean_model = model_name.replace('models/', '').strip()
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={active_key}'
+            url = f'https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent'
             try:
                 req = urllib.request.Request(
                     url,
                     data=json.dumps(payload).encode('utf-8'),
-                    headers={'Content-Type': 'application/json; charset=utf-8'}
+                    headers={
+                        'Content-Type': 'application/json; charset=utf-8',
+                        'x-goog-api-key': active_key
+                    }
                 )
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     resp_body = resp.read().decode('utf-8')
@@ -540,7 +547,12 @@ class DhryznRequestHandler(http.server.SimpleHTTPRequestHandler):
                     if not candidates:
                         raise Exception('No candidates in Gemini response')
 
-                    text = candidates[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                    parts = candidates[0].get('content', {}).get('parts', [])
+                    text_parts = [p.get('text', '') for p in parts if not p.get('thought') and isinstance(p.get('text'), str) and p.get('text', '').strip()]
+                    if text_parts:
+                        text = '\n\n'.join(text_parts).strip()
+                    else:
+                        text = '\n\n'.join([p.get('text', '') if isinstance(p, dict) else str(p) for p in parts]).strip()
                     
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json; charset=utf-8')

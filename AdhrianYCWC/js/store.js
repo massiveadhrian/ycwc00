@@ -15,18 +15,15 @@ export function getLocalDateStr(d) {
 export class Store {
   constructor() {
     this.listeners = {};
-    this.authToken = localStorage.getItem('dhryzn_token') || null;
     this.currentUser = null;
-    this.syncTimeout = null;
+    this.authToken = null;
 
     // Load local state initially
     this.state = this.loadState();
     this.recalculateDynamicStats();
 
-    // Check backend authentication on startup
-    if (this.authToken) {
-      this.checkAuth().catch(() => {});
-    }
+    // Check demo authentication session on startup
+    this.checkAuth();
   }
 
   getDefaultSubjects() {
@@ -432,175 +429,155 @@ export class Store {
   }
 
   // ============================================
-  // Backend Authentication & Data Synchronization
+  // Client-Side Demo Authentication & Session Management
   // ============================================
 
-  async checkAuth() {
-    if (!this.authToken) return null;
+  checkAuth() {
     try {
-      const res = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${this.authToken}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.ok && data.user) {
-          this.currentUser = data.user;
-          this.state.currentUser = data.user;
-          this.state.authToken = this.authToken;
-          await this.loadUserDataFromServer();
+      const sessionRaw = localStorage.getItem('dhryzn_session');
+      if (sessionRaw) {
+        const session = JSON.parse(sessionRaw);
+        if (session && session.user) {
+          this.currentUser = session.user;
+          this.state.currentUser = session.user;
+          this.state.authToken = session.token || 'demo_token';
           this.emit('auth', this.currentUser);
           return this.currentUser;
         }
       }
     } catch (e) {
-      // Backend offline or standalone mode
+      console.warn('Error reading demo session:', e);
     }
     return null;
   }
 
   async signUp(username, email, password) {
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password })
-    });
+    const cleanUsername = (username || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPassword = password || '';
 
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      throw new Error(data.error || 'Failed to create account.');
+    if (!cleanUsername || cleanUsername.length < 3) {
+      throw new Error('Username must be at least 3 characters.');
+    }
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error('A valid email address is required.');
+    }
+    if (!cleanPassword || cleanPassword.length < 6) {
+      throw new Error('Password must be at least 6 characters.');
     }
 
-    this.authToken = data.token;
-    this.currentUser = data.user;
-    this.state.authToken = data.token;
-    this.state.currentUser = data.user;
+    // Create non-sensitive demo user profile (NO password stored)
+    const user = {
+      id: 'usr_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+      username: cleanUsername,
+      email: cleanEmail
+    };
+
+    const token = 'demo_sess_' + Math.random().toString(36).substring(2, 12);
+    const sessionData = {
+      user,
+      token,
+      createdAt: new Date().toISOString()
+    };
+
+    // Store ONLY non-sensitive session metadata
+    try {
+      localStorage.setItem('dhryzn_session', JSON.stringify(sessionData));
+    } catch (e) {
+      console.warn('Failed to save session to localStorage:', e);
+    }
+
+    this.authToken = token;
+    this.currentUser = user;
+    this.state.authToken = token;
+    this.state.currentUser = user;
 
     this.saveState();
-    await this.syncToServerNow();
     this.emit('auth', this.currentUser);
-    return data.user;
+    return user;
   }
 
   async login(usernameOrEmail, password) {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usernameOrEmail, password })
-    });
+    const identifier = (usernameOrEmail || '').trim();
+    const cleanPassword = password || '';
 
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      throw new Error(data.error || 'Invalid credentials.');
+    if (!identifier) {
+      throw new Error('Username or email is required.');
+    }
+    if (!cleanPassword || cleanPassword.length < 1) {
+      throw new Error('Password is required.');
     }
 
-    this.authToken = data.token;
-    this.currentUser = data.user;
-    this.state.authToken = data.token;
-    this.state.currentUser = data.user;
+    // Check if matching demo session already exists
+    let user = null;
+    try {
+      const sessionRaw = localStorage.getItem('dhryzn_session');
+      if (sessionRaw) {
+        const session = JSON.parse(sessionRaw);
+        if (session && session.user) {
+          const u = session.user;
+          if (
+            u.username.toLowerCase() === identifier.toLowerCase() ||
+            u.email.toLowerCase() === identifier.toLowerCase()
+          ) {
+            user = u;
+          }
+        }
+      }
+    } catch (e) {}
 
-    localStorage.setItem('dhryzn_token', data.token);
+    // If no existing session matches, create user profile from identifier for demo
+    if (!user) {
+      const isEmail = identifier.includes('@');
+      const uname = isEmail ? identifier.split('@')[0] : identifier;
+      const uemail = isEmail ? identifier.toLowerCase() : `${identifier.toLowerCase()}@example.com`;
+      user = {
+        id: 'usr_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+        username: uname,
+        email: uemail
+      };
+    }
 
-    // Fetch user's persistent data from the server
-    await this.loadUserDataFromServer();
+    const token = 'demo_sess_' + Math.random().toString(36).substring(2, 12);
+    const sessionData = {
+      user,
+      token,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      localStorage.setItem('dhryzn_session', JSON.stringify(sessionData));
+    } catch (e) {
+      console.warn('Failed to save session to localStorage:', e);
+    }
+
+    this.authToken = token;
+    this.currentUser = user;
+    this.state.authToken = token;
+    this.state.currentUser = user;
 
     this.saveState();
     this.emit('auth', this.currentUser);
-    return data.user;
+    return user;
   }
 
   async logout() {
-    if (this.authToken) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${this.authToken}` }
-        });
-      } catch (e) {}
-    }
-
     this.authToken = null;
     this.currentUser = null;
-    localStorage.removeItem('dhryzn_token');
-    localStorage.removeItem('dhryzn_state');
+    this.state.currentUser = null;
+    this.state.authToken = null;
 
-    this.state = this.getDefaultState();
-    this.recalculateDynamicStats();
+    try {
+      localStorage.removeItem('dhryzn_session');
+      localStorage.removeItem('dhryzn_token');
+    } catch (e) {}
+
     this.saveState();
     this.emit('auth', null);
   }
 
-  async loadUserDataFromServer() {
-    if (!this.authToken) return;
-    try {
-      const res = await fetch('/api/user/data', {
-        headers: { 'Authorization': `Bearer ${this.authToken}` }
-      });
-      if (res.ok) {
-        const respData = await res.json();
-        if (respData.ok && respData.data) {
-          const serverData = respData.data;
-          
-          // Merge server data with local state
-          const defaultSubjects = this.getDefaultSubjects();
-          let subjects = serverData.subjects || this.state.subjects;
-          
-          subjects = subjects.map(s => {
-            const isDefault = defaultSubjects.some(d => d.id === s.id || d.name.toLowerCase() === s.name.toLowerCase());
-            return {
-              ...s,
-              isBuiltIn: isDefault || s.isBuiltIn === true,
-              isCustom: !isDefault && (s.isCustom === true || !s.isBuiltIn)
-            };
-          });
-
-          this.state = {
-            ...this.state,
-            ...serverData,
-            subjects,
-            currentUser: this.currentUser,
-            authToken: this.authToken
-          };
-
-          this.recalculateDynamicStats();
-          this.saveState();
-          this.emit('stateLoaded', this.state);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to load user data from server:', e);
-    }
-  }
-
   scheduleBackendSync() {
-    if (!this.authToken) return;
-    clearTimeout(this.syncTimeout);
-    this.syncTimeout = setTimeout(() => {
-      this.syncToServerNow().catch(() => {});
-    }, 1000);
-  }
-
-  async syncToServerNow() {
-    if (!this.authToken) return;
-    try {
-      const payload = {
-        subjects: this.state.subjects,
-        quizHistory: this.state.quizHistory,
-        examHistory: this.state.examHistory,
-        settings: this.state.settings,
-        chatMessages: (this.state.chatMessages || []).slice(-20)
-      };
-
-      await fetch('/api/user/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.authToken}`
-        },
-        body: JSON.stringify({ data: payload })
-      });
-    } catch (e) {
-      console.warn('Backend sync failed:', e);
-    }
+    // Demo mode: local state is already saved synchronously to localStorage
   }
 
   reset() {

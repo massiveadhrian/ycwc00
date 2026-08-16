@@ -1,0 +1,24 @@
+# ============================================
+# DHRYZN — Netlify Deployment Configuration
+# ============================================
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Route /api/gemini to the Netlify Serverless Function
+[[redirects]]
+  from = "/api/gemini"
+  to = "/.netlify/functions/gemini"
+  status = 200
+
+[[redirects]]
+  from = "/api/gemini/*"
+  to = "/.netlify/functions/gemini"
+  status = 200
+
+# SPA fallback for static frontend routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
