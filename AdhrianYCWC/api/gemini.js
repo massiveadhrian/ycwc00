@@ -4,14 +4,13 @@
 // Proxies Gemini API requests safely using server-side process.env.GEMINI_API_KEY.
 // API keys are strictly kept out of client bundles, frontend code, and version control.
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const FALLBACK_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash',
   'gemini-3.6-flash',
-  'gemini-flash-latest',
-  'gemini-2.0-flash-lite',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro'
+  'gemini-flash-latest'
 ];
 
 /**
@@ -139,7 +138,7 @@ module.exports = async function handler(req, res) {
     systemInstruction,
     model = DEFAULT_MODEL,
     temperature = 0.7,
-    maxTokens = 2048,
+    maxTokens = 8192,
     contents,
     jsonMode = false,
     message,
@@ -196,7 +195,7 @@ module.exports = async function handler(req, res) {
       contents: sanitizedContents,
       generationConfig: {
         temperature: typeof temperature === 'number' ? temperature : 0.7,
-        maxOutputTokens: typeof maxTokens === 'number' ? maxTokens : 2048
+        maxOutputTokens: typeof maxTokens === 'number' ? maxTokens : 8192
       }
     };
 
@@ -214,7 +213,7 @@ module.exports = async function handler(req, res) {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 28000);
+      const timeoutId = setTimeout(() => controller.abort(), 55000);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -239,8 +238,8 @@ module.exports = async function handler(req, res) {
       if (!response.ok) {
         lastStatus = response.status;
         lastError = data?.error?.message || response.statusText || 'Gemini API returned an error';
-        // If model not found or rate-limited, try next fallback model
-        if (response.status === 404 || response.status === 429 || response.status === 400) {
+        // If model not found, rate-limited, or temporary service error, try next fallback model
+        if (response.status === 404 || response.status === 429 || response.status === 503 || response.status === 500 || response.status === 502 || response.status === 504 || response.status === 400) {
           continue;
         }
         break;
@@ -281,7 +280,7 @@ module.exports = async function handler(req, res) {
       });
     } catch (err) {
       const isTimeout = err.name === 'AbortError';
-      lastError = isTimeout ? 'Gemini API request timed out (28s).' : (err.message || 'Internal proxy error');
+      lastError = isTimeout ? 'Gemini API request timed out (55s).' : (err.message || 'Internal proxy error');
       lastStatus = isTimeout ? 504 : 500;
       continue;
     }

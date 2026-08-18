@@ -35,7 +35,8 @@ export function renderQuiz(container, params, store, router) {
         answers: savedSession.answers,
         answered: savedSession.answered,
         startTime: savedSession.startTime
-      }
+      },
+      savedSession.configMeta
     );
     return;
   }
@@ -49,7 +50,8 @@ function renderQuizConfig(container, subject, store, router, pendingConfig) {
   const initTopic = pendingConfig?.topic || '';
   const initDifficulty = pendingConfig?.difficulty || 'Medium';
   const initType = pendingConfig?.questionType || 'Multiple Choice';
-  const initCount = pendingConfig?.questionCount || 10;
+  const initCount = Number(pendingConfig?.questionCount) || 10;
+  const initGrade = pendingConfig?.gradeLevel || 'Grade 10';
 
   container.innerHTML = `
     <div class="page-container">
@@ -67,19 +69,19 @@ function renderQuizConfig(container, subject, store, router, pendingConfig) {
         <div class="quiz-config-form" id="quiz-form-box">
           <div class="form-group animate-item">
             <label>Subject</label>
-            <input type="text" class="input-field" id="quiz-subject" placeholder="e.g., Chemistry, Biology, Mathematics, History" value="${initSubject}">
+            <input type="text" class="input-field" id="quiz-subject" placeholder="e.g., Chemistry, Biology, Mathematics, History" value="${escapeHtml(initSubject)}">
           </div>
 
           <div class="form-group animate-item">
             <label>Topic</label>
-            <input type="text" class="input-field" id="quiz-topic" placeholder="e.g., Stoichiometry, Blood type, Quadratic Equations" value="${initTopic}">
+            <input type="text" class="input-field" id="quiz-topic" placeholder="e.g., Stoichiometry, Blood type, Quadratic Equations" value="${escapeHtml(initTopic)}">
           </div>
 
           <div class="form-row animate-item">
             <div class="form-group">
               <label>Grade Level</label>
               <select class="select-field" id="quiz-grade">
-                ${gradeLevels.map(g => `<option value="${g}">${g}</option>`).join('')}
+                ${gradeLevels.map(g => `<option value="${g}" ${g === initGrade ? 'selected' : ''}>${g}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
@@ -137,18 +139,18 @@ function renderQuizConfig(container, subject, store, router, pendingConfig) {
 
   // Start quiz
   container.querySelector('#quiz-start-btn').addEventListener('click', async () => {
-    const subjectVal = container.querySelector('#quiz-subject').value.trim() || 'General Knowledge';
-    const topicVal = container.querySelector('#quiz-topic').value.trim() || subjectVal;
-    const gradeVal = container.querySelector('#quiz-grade').value;
-    const count = parseInt(container.querySelector('#quiz-count').value);
-    const difficulty = container.querySelector('#quiz-difficulty').value;
+    const subjectVal = container.querySelector('#quiz-subject')?.value?.trim() || initSubject || 'General Knowledge';
+    const topicVal = container.querySelector('#quiz-topic')?.value?.trim() || initTopic || subjectVal;
+    const gradeVal = container.querySelector('#quiz-grade')?.value || initGrade || 'Grade 10';
+    const count = parseInt(container.querySelector('#quiz-count')?.value) || initCount || 10;
+    const difficulty = container.querySelector('#quiz-difficulty')?.value || initDifficulty || 'Medium';
 
     const formBox = container.querySelector('#quiz-form-box');
     formBox.innerHTML = `
       <div style="text-align: center; padding: var(--space-10) var(--space-4);">
         <div style="font-size: 2.5rem; margin-bottom: var(--space-4);">✨</div>
         <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: var(--space-2);">Gemini 3.6 Flash is Crafting Your Quiz</h3>
-        <p style="color: var(--color-text-secondary); margin-bottom: var(--space-6);">Generating ${count} ${difficulty} ${selectedType} questions for <strong>${topicVal}</strong>...</p>
+        <p style="color: var(--color-text-secondary); margin-bottom: var(--space-6);">Generating ${count} ${difficulty} ${selectedType} questions for <strong>${escapeHtml(topicVal)}</strong>...</p>
         <div class="typing-indicator" style="justify-content: center; margin: 0 auto;">
           <span></span><span></span><span></span>
         </div>
@@ -157,7 +159,14 @@ function renderQuizConfig(container, subject, store, router, pendingConfig) {
 
     try {
       const questions = await generateDynamicQuiz(subjectVal, topicVal, count, selectedType, difficulty, gradeVal);
-      renderQuizTaking(container, questions, subjectVal, topicVal, selectedType, store, router);
+      renderQuizTaking(container, questions, subjectVal, topicVal, selectedType, store, router, null, {
+        subject: subjectVal,
+        topic: topicVal,
+        difficulty,
+        gradeLevel: gradeVal,
+        questionCount: count,
+        questionType: selectedType
+      });
     } catch (e) {
       console.error('Failed to generate quiz:', e);
       formBox.innerHTML = `
@@ -165,9 +174,19 @@ function renderQuizConfig(container, subject, store, router, pendingConfig) {
           <div style="color: var(--color-error); font-size: 2rem; margin-bottom: var(--space-3);">⚠️</div>
           <h3 style="margin-bottom: var(--space-2);">Could Not Generate Quiz</h3>
           <p style="color: var(--color-text-secondary); margin-bottom: var(--space-6);">There was a temporary issue contacting the AI engine.</p>
-          <button class="btn btn-primary" onclick="window.location.reload()">Try Again</button>
+          <button class="btn btn-primary" id="quiz-error-retry">Try Again</button>
         </div>
       `;
+      container.querySelector('#quiz-error-retry')?.addEventListener('click', () => {
+        renderQuizConfig(container, null, store, router, {
+          subject: subjectVal,
+          topic: topicVal,
+          difficulty,
+          gradeLevel: gradeVal,
+          questionCount: count,
+          questionType: selectedType
+        });
+      });
     }
   });
 }
@@ -221,11 +240,19 @@ function renderUnsupportedCourse(container, subject, topic, store, router) {
   });
 }
 
-function renderQuizTaking(container, questions, subject, topic, questionType, store, router, restored) {
+function renderQuizTaking(container, questions, subject, topic, questionType, store, router, restored, configMeta) {
   let currentQuestion = restored ? restored.currentQuestion : 0;
   let answers = restored ? restored.answers : new Array(questions.length).fill(null);
   let answered = restored ? restored.answered : new Array(questions.length).fill(false);
   let startTime = restored ? restored.startTime : Date.now();
+  const effectiveConfig = configMeta || (restored && restored.configMeta) || {
+    subject,
+    topic,
+    questionType,
+    questionCount: questions.length,
+    difficulty: 'Medium',
+    gradeLevel: 'Grade 10'
+  };
 
   /** Save the current quiz session to the store for resume */
   function saveSession() {
@@ -238,7 +265,8 @@ function renderQuizTaking(container, questions, subject, topic, questionType, st
       answers: [...answers],
       answered: [...answered],
       currentQuestion,
-      startTime
+      startTime,
+      configMeta: effectiveConfig
     });
   }
 
@@ -300,12 +328,9 @@ function renderQuizTaking(container, questions, subject, topic, questionType, st
                     if (isCorrect) classes += ' correct';
                     else if (isSelected && !isCorrect) classes += ' incorrect';
                   }
-                  let letterContent = letter;
-                  if (isAnswered && isCorrect) letterContent = '✓';
-                  else if (isAnswered && isSelected && !isCorrect) letterContent = '✗';
                   return `
                     <div class="${classes}" data-index="${i}">
-                      <div class="quiz-option-letter">${letterContent}</div>
+                      <div class="quiz-option-letter">${letter}</div>
                       <span>${opt}</span>
                     </div>
                   `;
@@ -313,73 +338,58 @@ function renderQuizTaking(container, questions, subject, topic, questionType, st
               </div>
             `}
 
-            ${isAnswered && q.explanation ? `
-              <div class="quiz-feedback ${isTF ? (answers[currentQuestion] === q.answer ? 'correct' : 'incorrect') : (answers[currentQuestion] === q.correct ? 'correct' : 'incorrect')}">
-                <div class="quiz-feedback-title">
-                  ${isTF ? (answers[currentQuestion] === q.answer ? '✅ Correct!' : '💡 Nice try!') : (answers[currentQuestion] === q.correct ? '✅ Correct!' : '💡 Nice try!')}
-                </div>
-                <div>${q.explanation}</div>
+            ${isAnswered && !isText ? `
+              <div class="quiz-explanation">
+                <div class="quiz-explanation-title">💡 Explanation</div>
+                <p>${q.explanation}</p>
               </div>
             ` : ''}
           </div>
 
-          <div class="quiz-nav-actions">
-            <button class="btn btn-secondary" id="quiz-prev" ${currentQuestion === 0 ? 'disabled style="opacity:0.4"' : ''}>← Previous</button>
-            <div style="display: flex; gap: var(--space-3);">
-              ${!isAnswered && !isText ? '<button class="btn btn-secondary" id="quiz-check" disabled>Check Answer</button>' : ''}
-              ${isText && !isAnswered ? '<button class="btn btn-primary" id="quiz-submit-text">Submit Answer</button>' : ''}
-              ${currentQuestion < questions.length - 1 ? `
-                <button class="btn btn-primary" id="quiz-next">Next →</button>
-              ` : `
-                <button class="btn btn-primary" id="quiz-finish">🎉 Finish Quiz</button>
-              `}
-            </div>
+          <div class="quiz-nav-bar">
+            <button class="btn btn-secondary" id="quiz-prev" ${currentQuestion === 0 ? 'disabled' : ''}>← Previous</button>
+            <div style="flex: 1;"></div>
+            ${currentQuestion < questions.length - 1 ? `
+              <button class="btn btn-primary" id="quiz-next">Next →</button>
+            ` : `
+              <button class="btn btn-primary btn-lg" id="quiz-finish">🏁 View Results</button>
+            `}
           </div>
         </div>
       </div>
     `;
 
-    // Event handlers
-    if (!isText && !isAnswered) {
-      container.querySelectorAll('.quiz-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-          if (isAnswered) return;
-
-          if (isTF) {
-            answers[currentQuestion] = opt.dataset.answer === 'true';
-          } else {
-            answers[currentQuestion] = parseInt(opt.dataset.index);
-          }
-
-          container.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
-          opt.classList.add('selected');
-
-          const checkBtn = container.querySelector('#quiz-check');
-          if (checkBtn) checkBtn.disabled = false;
-
-          saveSession();
+    // Option click
+    if (!isAnswered && !isText) {
+      if (isTF) {
+        container.querySelectorAll('.quiz-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const val = opt.dataset.answer === 'true';
+            answers[currentQuestion] = val;
+            answered[currentQuestion] = true;
+            saveSession();
+            render();
+          });
         });
-      });
-
-      const checkBtn = container.querySelector('#quiz-check');
-      if (checkBtn) {
-        checkBtn.addEventListener('click', () => {
-          answered[currentQuestion] = true;
-          saveSession();
-          render();
+      } else {
+        container.querySelectorAll('.quiz-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            answers[currentQuestion] = parseInt(opt.dataset.index);
+            answered[currentQuestion] = true;
+            saveSession();
+            render();
+          });
         });
       }
     }
 
-    // Text answer submit
-    const submitTextBtn = container.querySelector('#quiz-submit-text');
-    if (submitTextBtn) {
-      submitTextBtn.addEventListener('click', () => {
-        const textEl = container.querySelector('#text-answer');
-        answers[currentQuestion] = textEl.value.trim();
+    // Text answer change
+    const textArea = container.querySelector('#text-answer');
+    if (textArea) {
+      textArea.addEventListener('input', (e) => {
+        answers[currentQuestion] = e.target.value;
         answered[currentQuestion] = true;
         saveSession();
-        render();
       });
     }
 
@@ -399,7 +409,7 @@ function renderQuizTaking(container, questions, subject, topic, questionType, st
       finishBtn.addEventListener('click', () => {
         clearSession();
         const elapsed = Date.now() - startTime;
-        renderQuizResults(container, questions, answers, answered, questionType, subject, topic, elapsed, store, router);
+        renderQuizResults(container, questions, answers, answered, questionType, subject, topic, elapsed, store, router, effectiveConfig);
       });
     }
   }
@@ -407,7 +417,7 @@ function renderQuizTaking(container, questions, subject, topic, questionType, st
   render();
 }
 
-function renderQuizResults(container, questions, answers, answered, questionType, subject, topic, elapsed, store, router) {
+function renderQuizResults(container, questions, answers, answered, questionType, subject, topic, elapsed, store, router, configMeta) {
   // Ensure session is cleared when showing results
   store.set('activeQuizSession', null);
 
@@ -514,11 +524,33 @@ function renderQuizResults(container, questions, answers, answered, questionType
     list.style.display = list.style.display === 'none' ? 'block' : 'none';
   });
 
-  container.querySelector('#results-retry').addEventListener('click', () => {
-    router.navigate('quiz');
-  });
+  const retryBtn = container.querySelector('#results-retry');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      store.set('activeQuizSession', null);
+      renderQuizConfig(container, null, store, router, {
+        subject: configMeta?.subject || subject,
+        topic: configMeta?.topic || topic,
+        difficulty: configMeta?.difficulty || 'Medium',
+        gradeLevel: configMeta?.gradeLevel || 'Grade 10',
+        questionType: configMeta?.questionType || questionType,
+        questionCount: configMeta?.questionCount || questions.length
+      });
+    });
+  }
 
   container.querySelector('#results-home').addEventListener('click', () => {
     router.navigate('dashboard');
   });
 }
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+

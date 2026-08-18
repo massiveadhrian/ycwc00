@@ -440,15 +440,29 @@ export class Store {
         if (session && session.user) {
           this.currentUser = session.user;
           this.state.currentUser = session.user;
-          this.state.authToken = session.token || 'demo_token';
+          this.state.authToken = session.token || this.state.authToken || 'demo_token';
+          this.authToken = this.state.authToken;
           this.emit('auth', this.currentUser);
           return this.currentUser;
         }
+      } else if (this.state && this.state.currentUser) {
+        this.currentUser = this.state.currentUser;
+        this.authToken = this.state.authToken || localStorage.getItem('dhryzn_token') || 'demo_token';
+        this.emit('auth', this.currentUser);
+        return this.currentUser;
       }
     } catch (e) {
       console.warn('Error reading demo session:', e);
     }
     return null;
+  }
+
+  getUser() {
+    return this.currentUser || (this.state ? this.state.currentUser : null);
+  }
+
+  isAuthenticated() {
+    return Boolean(this.getUser());
   }
 
   async signUp(username, email, password) {

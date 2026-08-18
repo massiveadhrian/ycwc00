@@ -2,7 +2,7 @@
 // DHRYZN — Google Gemini AI Engine (Server-Side Secret Architecture)
 // ============================================
 
-const DEFAULT_MODEL = 'gemini-3.6-flash';
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 /**
  * Check if the backend proxy server is active and online
@@ -31,12 +31,12 @@ export async function generateGeminiContent({
   systemInstruction = '',
   model = DEFAULT_MODEL,
   temperature = 0.7,
-  maxTokens = 2048,
+  maxTokens = 8192,
   contents = null,
   jsonMode = false
 }) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
 
   try {
     const proxyRes = await fetch('/api/gemini', {
@@ -58,21 +58,27 @@ export async function generateGeminiContent({
     if (proxyRes.ok) {
       const data = await proxyRes.json();
       if (data.ok && data.text) {
-        return { text: data.text, model: data.model || model, proxy: true };
+        return { text: data.text, model: data.model || model, proxy: true, status: proxyRes.status };
       }
       if (data.error) {
-        throw new Error(data.error);
+        const err = new Error(data.error);
+        err.status = proxyRes.status;
+        throw err;
       }
     } else {
       const errJson = await proxyRes.json().catch(() => ({}));
-      throw new Error(errJson.error || `Server HTTP ${proxyRes.status}`);
+      const err = new Error(errJson.error || `Server HTTP ${proxyRes.status}`);
+      err.status = proxyRes.status;
+      throw err;
     }
   } catch (e) {
     clearTimeout(timeoutId);
     throw e;
   }
 
-  throw new Error('Gemini API request failed. Please check backend configuration.');
+  const defaultErr = new Error('Gemini API request failed. Please check backend configuration.');
+  defaultErr.status = 500;
+  throw defaultErr;
 }
 
 // ============================================
@@ -129,7 +135,8 @@ Create the explanation now for "${topic}".`;
       prompt,
       systemInstruction,
       model: DEFAULT_MODEL,
-      temperature: 0.6
+      temperature: 0.6,
+      maxTokens: 4096
     });
     return result.text;
   } catch (error) {
@@ -226,6 +233,143 @@ export function shuffleQuestionOptions(question) {
 }
 
 /**
+ * Validates and normalizes parsed question objects against required schema.
+ */
+export function normalizeAndValidateQuestions(parsed, questionType, expectedCount) {
+  if (!parsed) {
+    return { valid: false, reason: 'Parsed JSON is null or empty', questions: null };
+  }
+
+  let rawList = [];
+  if (Array.isArray(parsed)) {
+    rawList = parsed;
+  } else if (typeof parsed === 'object') {
+    // Check if questions are nested under a key
+    const arrayKey = ['questions', 'quiz', 'items', 'data', 'results', 'exam'].find(k => Array.isArray(parsed[k]))
+      || Object.keys(parsed).find(k => Array.isArray(parsed[k]));
+    if (arrayKey && Array.isArray(parsed[arrayKey])) {
+      rawList = parsed[arrayKey];
+    } else if (parsed.question) {
+      rawList = [parsed];
+    }
+  }
+
+  if (!Array.isArray(rawList) || rawList.length === 0) {
+    return { valid: false, reason: 'No array of questions found in parsed structure', questions: null };
+  }
+
+  const isTF = (questionType || '').includes('True');
+  const isText = (questionType || '').includes('Short') || (questionType || '').includes('Essay');
+
+  const validated = [];
+  for (let i = 0; i < rawList.length; i++) {
+    const raw = rawList[i];
+    if (!raw || typeof raw !== 'object') {
+      return { valid: false, reason: `Item at index ${i} is not a valid question object`, questions: null };
+    }
+
+    const questionText = typeof raw.question === 'string' ? raw.question.trim() : '';
+    if (!questionText) {
+      return { valid: false, reason: `Question at index ${i} has empty or missing 'question' field`, questions: null };
+    }
+
+    const explanation = typeof raw.explanation === 'string' && raw.explanation.trim()
+      ? raw.explanation.trim()
+      : 'Correct answer based on core course principles.';
+
+    if (isTF) {
+      let boolAnswer = null;
+      if (typeof raw.answer === 'boolean') {
+        boolAnswer = raw.answer;
+      } else if (typeof raw.answer === 'string') {
+        const lower = raw.answer.trim().toLowerCase();
+        if (lower === 'true' || lower === 't') boolAnswer = true;
+        else if (lower === 'false' || lower === 'f') boolAnswer = false;
+      } else if (typeof raw.correct === 'boolean') {
+        boolAnswer = raw.correct;
+      }
+
+      if (boolAnswer === null) {
+        return { valid: false, reason: `True/False question at index ${i} does not contain a valid boolean answer`, questions: null };
+      }
+
+      validated.push({
+        question: questionText,
+        answer: boolAnswer,
+        explanation
+      });
+    } else if (isText) {
+      const sampleAnswer = typeof raw.sampleAnswer === 'string' && raw.sampleAnswer.trim()
+        ? raw.sampleAnswer.trim()
+        : (typeof raw.answer === 'string' && raw.answer.trim() ? raw.answer.trim() : 'Sample answer.');
+
+      validated.push({
+        question: questionText,
+        sampleAnswer,
+        explanation
+      });
+    } else {
+      // Multiple Choice
+      const options = raw.options;
+      if (!Array.isArray(options) || options.length !== 4) {
+        return { valid: false, reason: `Multiple Choice question at index ${i} does not have exactly 4 options (received ${options?.length})`, questions: null };
+      }
+
+      const stringOptions = options.map(opt => String(opt ?? '').trim());
+      if (stringOptions.some(opt => opt.length === 0)) {
+        return { valid: false, reason: `Multiple Choice question at index ${i} contains an empty option string`, questions: null };
+      }
+
+      let correctIndex = -1;
+      if (typeof raw.correct === 'number' && Number.isInteger(raw.correct) && raw.correct >= 0 && raw.correct <= 3) {
+        correctIndex = raw.correct;
+      } else if (typeof raw.correct === 'string') {
+        const trimmed = raw.correct.trim().toUpperCase();
+        if (['A', 'B', 'C', 'D'].includes(trimmed)) {
+          correctIndex = trimmed.charCodeAt(0) - 65;
+        } else if (['0', '1', '2', '3'].includes(trimmed)) {
+          correctIndex = parseInt(trimmed, 10);
+        }
+      }
+
+      // Check if 'answer' field was used instead
+      if (correctIndex === -1 && raw.answer !== undefined) {
+        if (typeof raw.answer === 'number' && Number.isInteger(raw.answer) && raw.answer >= 0 && raw.answer <= 3) {
+          correctIndex = raw.answer;
+        } else if (typeof raw.answer === 'string') {
+          const trimmed = raw.answer.trim();
+          const upper = trimmed.toUpperCase();
+          if (['A', 'B', 'C', 'D'].includes(upper)) {
+            correctIndex = upper.charCodeAt(0) - 65;
+          } else {
+            const matchIdx = stringOptions.findIndex(o => o.toLowerCase() === trimmed.toLowerCase());
+            if (matchIdx !== -1) correctIndex = matchIdx;
+          }
+        }
+      }
+
+      if (correctIndex < 0 || correctIndex > 3) {
+        return { valid: false, reason: `Multiple Choice question at index ${i} has invalid correct answer index (${raw.correct ?? raw.answer})`, questions: null };
+      }
+
+      validated.push({
+        question: questionText,
+        options: stringOptions,
+        correct: correctIndex,
+        explanation
+      });
+    }
+  }
+
+  // Ensure count is reasonably satisfied
+  if (expectedCount && validated.length < Math.min(expectedCount, 2)) {
+    return { valid: false, reason: `Question list length (${validated.length}) is below required minimum (${expectedCount})`, questions: null };
+  }
+
+  return { valid: true, reason: null, questions: validated };
+}
+
+/**
  * Generate customized quiz questions using Gemini 3.6 Flash
  */
 export async function generateDynamicQuiz(subject, topic, count = 5, questionType = 'Multiple Choice', difficulty = 'Medium', gradeLevel = 'Grade 10') {
@@ -280,29 +424,57 @@ Output JSON format:
   ...
 ]`;
 
+  let rawResult = null;
+  let parsedJson = null;
+  let validationError = null;
+
   try {
-    const result = await generateGeminiContent({
+    const tokenLimit = count >= 15 ? 16384 : 8192;
+    rawResult = await generateGeminiContent({
       prompt,
       systemInstruction,
       model: DEFAULT_MODEL,
       temperature: 0.7,
+      maxTokens: tokenLimit,
       jsonMode: true
     });
 
-    const parsed = extractJson(result.text);
-    let questionsList = null;
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      questionsList = parsed;
-    } else if (parsed && Array.isArray(parsed.questions)) {
-      questionsList = parsed.questions;
-    }
+    parsedJson = extractJson(rawResult.text);
+    const validation = normalizeAndValidateQuestions(parsedJson, questionType, count);
 
-    if (questionsList && questionsList.length > 0) {
+    if (validation.valid && validation.questions && validation.questions.length > 0) {
       // Apply option shuffling to guarantee randomized answer positions
-      return questionsList.map(q => isTF || isText ? q : shuffleQuestionOptions(q));
+      return validation.questions.map(q => isTF || isText ? q : shuffleQuestionOptions(q));
+    } else {
+      validationError = validation.reason || 'Failed schema validation';
     }
   } catch (error) {
+    // Diagnostic logging for generation errors (Requirement 7)
+    console.warn('[DHRYZN Quiz Generation Diagnostic]', {
+      subject,
+      topic,
+      count,
+      questionType,
+      httpStatus: error.status || rawResult?.status || 'network_error',
+      backendError: error.message,
+      rawTextPreview: rawResult?.text ? rawResult.text.slice(0, 300) : null,
+      parsedJson: parsedJson ? 'parsed' : null,
+      validationFailureReason: validationError || error.message
+    });
     console.error('Quiz generation error:', error);
+  }
+
+  // If validation failed on non-exception path, log diagnostic
+  if (validationError) {
+    console.warn('[DHRYZN Quiz Validation Diagnostic]', {
+      subject,
+      topic,
+      count,
+      questionType,
+      rawText: rawResult?.text,
+      parsedJson,
+      validationFailureReason: validationError
+    });
   }
 
   // Domain-Aware Intelligent Fallback Generator
@@ -319,35 +491,100 @@ export async function generateDynamicExam(subject, topic, count = 10, difficulty
 /**
  * Helper to safely extract JSON from Gemini text response
  */
-function extractJson(text) {
-  if (!text) return null;
+export function extractJson(text) {
+  if (!text || typeof text !== 'string') return null;
   let clean = text.trim();
 
-  // Remove markdown ```json ... ``` tags if present
-  if (clean.startsWith('```')) {
-    clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
-  }
-
+  // Try direct parse first
   try {
     return JSON.parse(clean);
-  } catch (e) {
-    // Try finding the first [ or { and matching end
-    const startArr = clean.indexOf('[');
-    const endArr = clean.lastIndexOf(']');
-    if (startArr !== -1 && endArr > startArr) {
-      try {
-        return JSON.parse(clean.substring(startArr, endArr + 1));
-      } catch (e2) {}
+  } catch (e) {}
+
+  // Try extracting content inside ```json ... ``` or ``` ... ```
+  const fenceMatch = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    try {
+      return JSON.parse(fenceMatch[1].trim());
+    } catch (e) {}
+    try {
+      return JSON.parse(fenceMatch[1].trim() + ']');
+    } catch (e) {}
+  }
+
+  // Try finding array bracket bounds [ ... ]
+  const startArr = clean.indexOf('[');
+  const endArr = clean.lastIndexOf(']');
+  if (startArr !== -1 && endArr > startArr) {
+    try {
+      return JSON.parse(clean.substring(startArr, endArr + 1));
+    } catch (e2) {}
+  }
+
+  // If starts with [ but missing closing ]
+  if (startArr !== -1) {
+    try {
+      return JSON.parse(clean.substring(startArr) + ']');
+    } catch (e) {}
+  }
+
+  // Try finding object brace bounds { ... }
+  const startObj = clean.indexOf('{');
+  const endObj = clean.lastIndexOf('}');
+  if (startObj !== -1 && endObj > startObj) {
+    try {
+      return JSON.parse(clean.substring(startObj, endObj + 1));
+    } catch (e3) {}
+  }
+
+  // Object-by-object extraction fallback for streaming/truncated responses
+  const objects = [];
+  let braceDepth = 0;
+  let inString = false;
+  let escapeNext = false;
+  let objStart = -1;
+
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
     }
 
-    const startObj = clean.indexOf('{');
-    const endObj = clean.lastIndexOf('}');
-    if (startObj !== -1 && endObj > startObj) {
-      try {
-        return JSON.parse(clean.substring(startObj, endObj + 1));
-      } catch (e3) {}
+    if (char === '\\' && inString) {
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === '{') {
+        if (braceDepth === 0) {
+          objStart = i;
+        }
+        braceDepth++;
+      } else if (char === '}') {
+        braceDepth--;
+        if (braceDepth === 0 && objStart !== -1) {
+          const objStr = clean.substring(objStart, i + 1);
+          try {
+            const parsedObj = JSON.parse(objStr);
+            objects.push(parsedObj);
+          } catch (e) {}
+          objStart = -1;
+        }
+      }
     }
   }
+
+  if (objects.length > 0) {
+    return objects;
+  }
+
   return null;
 }
 

@@ -5,6 +5,7 @@
 .exam-config {
   max-width: 680px;
   margin: 0 auto;
+  padding-top: var(--space-6);
 }
 
 .exam-config-header {

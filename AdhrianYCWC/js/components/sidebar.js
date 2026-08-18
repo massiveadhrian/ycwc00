@@ -107,7 +107,7 @@ export function renderSidebar(container, router, store = null) {
       logoutBtn.addEventListener('click', async () => {
         await activeStore.logout();
         updateUserSection();
-        router.navigate('dashboard');
+        router.navigate('landing');
       });
     }
   }

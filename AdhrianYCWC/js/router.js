@@ -65,7 +65,14 @@ export class Router {
   }
 
   navigate(path) {
-    window.location.hash = path;
+    const rawHash = window.location.hash.slice(1);
+    const currentHash = (!rawHash || rawHash === '' || rawHash === '/') ? 'landing' : rawHash;
+    if (currentHash === path) {
+      this.currentRoute = null;
+      this.handleRoute();
+    } else {
+      window.location.hash = path;
+    }
   }
 
   start() {

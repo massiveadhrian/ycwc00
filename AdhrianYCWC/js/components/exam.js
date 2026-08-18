@@ -37,8 +37,11 @@ export function renderExam(container, params, store, router) {
         answers: savedSession.answers,
         bookmarked: savedSession.bookmarked,
         currentQuestion: savedSession.currentQuestion,
-        timeLeftSeconds: savedSession.timeLeftSeconds
-      }
+        timeLeftSeconds: savedSession.timeLeftSeconds,
+        endTime: savedSession.endTime
+      },
+      state,
+      savedSession.configMeta
     );
     return () => {
       if (state.cleanup) state.cleanup();
@@ -57,6 +60,7 @@ function renderExamConfig(container, subject, store, router, state, pendingConfi
   const initTopic = pendingConfig?.topic || '';
   const initDifficulty = pendingConfig?.difficulty || 'Hard';
   const initCount = pendingConfig?.questionCount || 10;
+  const initDuration = pendingConfig?.duration || 45;
 
   container.innerHTML = `
     <div class="page-container">
@@ -86,10 +90,10 @@ function renderExamConfig(container, subject, store, router, state, pendingConfi
             <div class="form-group">
               <label>Duration</label>
               <select class="select-field" id="exam-duration">
-                <option value="15">15 Minutes</option>
-                <option value="30">30 Minutes</option>
-                <option value="45" selected>45 Minutes</option>
-                <option value="60">60 Minutes</option>
+                <option value="15" ${initDuration === 15 ? 'selected' : ''}>15 Minutes</option>
+                <option value="30" ${initDuration === 30 ? 'selected' : ''}>30 Minutes</option>
+                <option value="45" ${initDuration === 45 ? 'selected' : ''}>45 Minutes</option>
+                <option value="60" ${initDuration === 60 ? 'selected' : ''}>60 Minutes</option>
               </select>
             </div>
             <div class="form-group">
@@ -103,9 +107,9 @@ function renderExamConfig(container, subject, store, router, state, pendingConfi
           <div class="form-group animate-item">
             <label>Number of Questions</label>
             <select class="select-field" id="exam-count">
-              <option value="5">5 Questions (Quick Test)</option>
+              <option value="5" ${initCount === 5 ? 'selected' : ''}>5 Questions (Quick Test)</option>
               <option value="10" ${initCount === 10 ? 'selected' : ''}>10 Questions</option>
-              <option value="15">15 Questions</option>
+              <option value="15" ${initCount === 15 ? 'selected' : ''}>15 Questions</option>
               <option value="20" ${initCount === 20 ? 'selected' : ''}>20 Questions (Standard)</option>
             </select>
           </div>
@@ -126,11 +130,11 @@ function renderExamConfig(container, subject, store, router, state, pendingConfi
   });
 
   container.querySelector('#exam-start-btn').addEventListener('click', async () => {
-    const subjectVal = container.querySelector('#exam-subject').value.trim() || 'General Subject';
-    const topicVal = container.querySelector('#exam-topic').value.trim() || subjectVal;
-    const duration = parseInt(container.querySelector('#exam-duration').value);
-    const count = parseInt(container.querySelector('#exam-count').value);
-    const difficulty = container.querySelector('#exam-difficulty').value;
+    const subjectVal = container.querySelector('#exam-subject')?.value?.trim() || initSubject || 'General Subject';
+    const topicVal = container.querySelector('#exam-topic')?.value?.trim() || initTopic || subjectVal;
+    const duration = parseInt(container.querySelector('#exam-duration')?.value) || initDuration || 45;
+    const count = parseInt(container.querySelector('#exam-count')?.value) || initCount || 10;
+    const difficulty = container.querySelector('#exam-difficulty')?.value || initDifficulty || 'Hard';
 
     const formBox = container.querySelector('#exam-form-box');
     formBox.innerHTML = `
@@ -146,7 +150,14 @@ function renderExamConfig(container, subject, store, router, state, pendingConfi
 
     try {
       const questions = await generateDynamicExam(subjectVal, topicVal, count, difficulty, 'Grade 11');
-      state.cleanup = renderExamEnvironment(container, questions, subjectVal, topicVal, duration, store, router);
+      state.cleanup = renderExamEnvironment(container, questions, subjectVal, topicVal, duration, store, router, null, state, {
+        subject: subjectVal,
+        topic: topicVal,
+        duration,
+        difficulty,
+        questionCount: count,
+        gradeLevel: 'Grade 11'
+      });
     } catch (e) {
       console.error('Exam generation error:', e);
       formBox.innerHTML = `
@@ -210,15 +221,51 @@ function renderUnsupportedCourse(container, subject, topic, store, router) {
   });
 }
 
-function renderExamEnvironment(container, questions, subject, topic, durationMinutes, store, router, restored) {
+function renderExamEnvironment(container, questions, subject, topic, durationMinutes, store, router, restored, state, configMeta) {
   let currentQuestion = restored ? restored.currentQuestion : 0;
   let answers = restored ? restored.answers : new Array(questions.length).fill(null);
   let bookmarked = restored ? restored.bookmarked : new Array(questions.length).fill(false);
-  let timeLeft = restored ? restored.timeLeftSeconds : durationMinutes * 60; // seconds
+  const effectiveConfig = configMeta || (restored && restored.configMeta) || {
+    subject,
+    topic,
+    duration: durationMinutes,
+    difficulty: 'Hard',
+    questionCount: questions.length,
+    gradeLevel: 'Grade 11'
+  };
+
+  // Determine absolute end time (support backward compatibility with sessions having only timeLeftSeconds)
+  let endTime;
+  if (restored && typeof restored.endTime === 'number') {
+    endTime = restored.endTime;
+  } else if (restored && typeof restored.timeLeftSeconds === 'number') {
+    endTime = Date.now() + restored.timeLeftSeconds * 1000;
+  } else {
+    endTime = Date.now() + durationMinutes * 60 * 1000;
+  }
+
+  function calculateTimeLeft() {
+    return Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+  }
+
+  let timeLeft = calculateTimeLeft();
   let timerInterval = null;
+
+  /** Clear the saved session (exam is done) */
+  function clearSession() {
+    store.set('activeQuizSession', null);
+  }
+
+  // If exam has already expired (e.g. while user was away), immediately submit through existing timeout/result flow
+  if (timeLeft <= 0) {
+    clearSession();
+    submitExamResults(container, questions, answers, subject, topic, durationMinutes, 0, store, router, state, effectiveConfig);
+    return () => {};
+  }
 
   /** Save the current exam session to the store for resume */
   function saveSession() {
+    timeLeft = calculateTimeLeft();
     store.set('activeQuizSession', {
       type: 'exam',
       subject,
@@ -228,16 +275,13 @@ function renderExamEnvironment(container, questions, subject, topic, durationMin
       answers: [...answers],
       bookmarked: [...bookmarked],
       currentQuestion,
-      timeLeftSeconds: timeLeft
+      timeLeftSeconds: timeLeft,
+      endTime,
+      configMeta: effectiveConfig
     });
   }
 
-  /** Clear the saved session (exam is done) */
-  function clearSession() {
-    store.set('activeQuizSession', null);
-  }
-
-  // Save immediately when entering the exam
+  // Save immediately when entering the exam to persist endTime
   saveSession();
 
   function formatTime(sec) {
@@ -254,8 +298,13 @@ function renderExamEnvironment(container, questions, subject, topic, durationMin
   }
 
   function startTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
     timerInterval = setInterval(() => {
-      timeLeft--;
+      timeLeft = calculateTimeLeft();
       const timerEl = container.querySelector('#exam-timer');
       if (timerEl) {
         timerEl.textContent = formatTime(timeLeft);
@@ -266,14 +315,18 @@ function renderExamEnvironment(container, questions, subject, topic, durationMin
         saveSession();
       }
       if (timeLeft <= 0) {
-        clearInterval(timerInterval);
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
         clearSession();
-        submitExamResults(container, questions, answers, subject, topic, durationMinutes, timeLeft, store, router);
+        submitExamResults(container, questions, answers, subject, topic, durationMinutes, 0, store, router, state, effectiveConfig);
       }
     }, 1000);
   }
 
   function render() {
+    timeLeft = calculateTimeLeft();
     const q = questions[currentQuestion];
     const answeredCount = answers.filter(a => a !== null).length;
 
@@ -398,11 +451,30 @@ function renderExamEnvironment(container, questions, subject, topic, durationMin
     const reviewBtn = container.querySelector('#exam-review-btn');
     if (reviewBtn) {
       reviewBtn.addEventListener('click', () => {
-        clearInterval(timerInterval);
-        renderExamReview(container, questions, answers, bookmarked, subject, topic, durationMinutes, timeLeft, store, router, () => {
-          startTimer();
-          render();
-        }, clearSession);
+        renderExamReview(
+          container,
+          questions,
+          answers,
+          bookmarked,
+          subject,
+          topic,
+          durationMinutes,
+          endTime,
+          store,
+          router,
+          () => {
+            render();
+          },
+          () => {
+            if (timerInterval) {
+              clearInterval(timerInterval);
+              timerInterval = null;
+            }
+            clearSession();
+          },
+          state,
+          effectiveConfig
+        );
       });
     }
   }
@@ -411,11 +483,14 @@ function renderExamEnvironment(container, questions, subject, topic, durationMin
   render();
 
   return () => {
-    if (timerInterval) clearInterval(timerInterval);
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
   };
 }
 
-function renderExamReview(container, questions, answers, bookmarked, subject, topic, durationMinutes, timeLeft, store, router, goBack, clearSession) {
+function renderExamReview(container, questions, answers, bookmarked, subject, topic, durationMinutes, endTime, store, router, goBack, clearSession, state, configMeta) {
   const answeredCount = answers.filter(a => a !== null).length;
   const unanswered = questions.length - answeredCount;
   const bookmarkedCount = bookmarked.filter(b => b).length;
@@ -459,11 +534,12 @@ function renderExamReview(container, questions, answers, bookmarked, subject, to
 
   container.querySelector('#review-submit').addEventListener('click', () => {
     clearSession();
-    submitExamResults(container, questions, answers, subject, topic, durationMinutes, timeLeft, store, router);
+    const remainingTime = typeof endTime === 'number' ? Math.max(0, Math.ceil((endTime - Date.now()) / 1000)) : 0;
+    submitExamResults(container, questions, answers, subject, topic, durationMinutes, remainingTime, store, router, state, configMeta);
   });
 }
 
-function submitExamResults(container, questions, answers, subject, topic, durationMinutes, timeLeft, store, router) {
+function submitExamResults(container, questions, answers, subject, topic, durationMinutes, timeLeft, store, router, state, configMeta) {
   // Ensure session is cleared when showing results
   store.set('activeQuizSession', null);
 
@@ -581,6 +657,20 @@ function submitExamResults(container, questions, answers, subject, topic, durati
   const readinessCanvas = container.querySelector('#readiness-chart');
   if (readinessCanvas) drawCircularProgress(readinessCanvas, Math.round(score * 0.9), { size: 120, lineWidth: 10 });
 
-  container.querySelector('#exam-retake').addEventListener('click', () => router.navigate('exam'));
+  container.querySelector('#exam-retake').addEventListener('click', () => {
+    store.set('activeQuizSession', null);
+    if (state && state.cleanup) {
+      state.cleanup();
+      state.cleanup = null;
+    }
+    renderExamConfig(container, null, store, router, state || { cleanup: null }, {
+      subject,
+      topic,
+      duration: durationMinutes,
+      difficulty: configMeta?.difficulty || 'Hard',
+      questionCount: configMeta?.questionCount || questions.length
+    });
+  });
+
   container.querySelector('#exam-dashboard').addEventListener('click', () => router.navigate('dashboard'));
 }

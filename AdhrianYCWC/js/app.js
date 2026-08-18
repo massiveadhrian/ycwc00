@@ -58,6 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
   router.register('history', (el, params) => renderHistory(el, params, store, router));
   router.register('settings', (el, params) => renderSettings(el, params, store, router));
 
-  // Start router
-  router.start();
+  // Start router & perform initial route decision
+  const user = store.checkAuth() || store.getUser();
+  const rawHash = window.location.hash.slice(1);
+  const initialRoute = (!rawHash || rawHash === '' || rawHash === '/') ? 'landing' : rawHash.split('/')[0];
+
+  if (user && initialRoute === 'landing') {
+    // If authenticated and the initial entry route is empty or landing, navigate directly to Dashboard
+    router.navigate('dashboard');
+  } else {
+    // Start router normally
+    router.start();
+  }
 });
