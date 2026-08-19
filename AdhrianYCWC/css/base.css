@@ -326,6 +326,7 @@ img {
   align-items: center;
   justify-content: center;
   padding: var(--space-6);
+  overflow-y: auto;
   animation: fadeIn 0.2s ease;
 }
 
@@ -336,6 +337,7 @@ img {
   padding: var(--space-8);
   width: 100%;
   max-width: 480px;
+  min-height: 0;
   z-index: var(--z-modal);
   animation: slideUp 0.3s ease;
 }
