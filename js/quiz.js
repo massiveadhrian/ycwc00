@@ -82,13 +82,13 @@ function renderQuizConfig(container, subject, store, router, pendingConfig) {
             <div class="form-group">
               <label>${t('quiz.gradeLevel')}</label>
               <select class="select-field" id="quiz-grade">
-                ${gradeLevels.map(g => `<option value="${g}" ${g === initGrade ? 'selected' : ''}>${g}</option>`).join('')}
+                ${gradeLevels.map(g => `<option value="${g}" ${g === initGrade ? 'selected' : ''}>${t('grade.' + g)}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
               <label>${t('quiz.difficulty')}</label>
               <select class="select-field" id="quiz-difficulty">
-                ${difficultyLevels.map(d => `<option value="${d}" ${d === initDifficulty ? 'selected' : ''}>${d}</option>`).join('')}
+                ${difficultyLevels.map(d => `<option value="${d}" ${d === initDifficulty ? 'selected' : ''}>${t('difficulty.' + d)}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -107,7 +107,7 @@ function renderQuizConfig(container, subject, store, router, pendingConfig) {
             <label>${t('quiz.questionType')}</label>
             <div class="question-type-grid" id="question-type-grid">
               ${questionTypes.map((typeOption) => `
-                <div class="question-type-option${typeOption === initType ? ' selected' : ''}" data-type="${typeOption}">${typeOption}</div>
+                <div class="question-type-option${typeOption === initType ? ' selected' : ''}" data-type="${typeOption}">${t('type.' + typeOption)}</div>
               `).join('')}
             </div>
           </div>

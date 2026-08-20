@@ -100,7 +100,7 @@ function renderExamConfig(container, subject, store, router, state, pendingConfi
             <div class="form-group">
               <label>${t('exam.difficulty')}</label>
               <select class="select-field" id="exam-difficulty">
-                ${difficultyLevels.map(d => `<option value="${d}" ${d === initDifficulty ? 'selected' : ''}>${d}</option>`).join('')}
+                ${difficultyLevels.map(d => `<option value="${d}" ${d === initDifficulty ? 'selected' : ''}>${t('difficulty.' + d)}</option>`).join('')}
               </select>
             </div>
           </div>
